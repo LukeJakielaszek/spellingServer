@@ -27,7 +27,7 @@
 typedef struct dictThread{
   char ** dict;
   int dictLen;
-  sbuf_monitor_t monitor;
+  sbuf_monitor_t *monitor;
 }dictThread;
 
 void *dictionarySearch(void * dictStruct);
@@ -78,7 +78,7 @@ int main(int argc, char ** argv){
 
   dictInfo.dict = dict;
   dictInfo.dictLen = dictLen;
-  dictInfo.monitor = serverToLook;
+  dictInfo.monitor = &serverToLook;
   
   // array of searcher threads
   pthread_t searchers[SEARCH_CAPACITY];
@@ -133,7 +133,7 @@ void *dictionarySearch(void * dictStruct){
   printf("Getting client descriptor\n");
 
   // get client file descriptor
-  int clientFd = sbuf_remove(&dictInfo->monitor);
+  int clientFd = sbuf_remove(dictInfo->monitor);
   
   // buffer
   char buffer[BUFFSIZE];
@@ -141,10 +141,21 @@ void *dictionarySearch(void * dictStruct){
   printf("Attempting to read from client\n");
   
   // get word to check from client
-  read(clientFd, buffer, BUFFSIZE);
+  if(read(clientFd, buffer, BUFFSIZE)<0){
+    printf("ERROR: Failed to read client input.\n");
+    exit(EXIT_FAILURE);
+  }
+  
+  // find newline character in client word
+  int i = 0;
+  while(buffer[i] != '\n'){
+    printf("[%c]\n", buffer[i]);
+    ++i;
+  }
 
-  printf("[%s]\n", buffer);
-
+  // overwrite newline with null
+  buffer[i] = '\0';
+  
   // search dict for client word
   int isWord = checkDict(dictInfo->dict, buffer, dictInfo->dictLen);
 

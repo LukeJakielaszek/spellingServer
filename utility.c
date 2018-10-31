@@ -29,11 +29,17 @@ int sbuf_remove(sbuf_monitor_t * sp){
   int fd;
 
   // locks monitor
-  pthread_mutex_lock(&sp->mutex);
+  if(pthread_mutex_lock(&sp->mutex) != 0){
+    printf("ERROR: Unable to lock mutex.\n");
+    exit(EXIT_FAILURE);
+  }
 
   // checks if any slots have an item
   while(sp->count == 0){
-    pthread_cond_wait(&sp->full_slot, &sp->mutex);
+    if(pthread_cond_wait(&sp->full_slot, &sp->mutex)){
+      printf("ERROR: Unable to wait on full slot.\n");
+      exit(EXIT_FAILURE);
+    }
   }
 
   // removes item
@@ -42,10 +48,16 @@ int sbuf_remove(sbuf_monitor_t * sp){
   sp->count--;
   
   // signals producers
-  pthread_cond_signal(&sp->empty_slot);
+  if(pthread_cond_signal(&sp->empty_slot) != 0){
+      printf("ERROR: Unable to signal empty slot.\n");
+      exit(EXIT_FAILURE);
+  }
 
   // unlocks monitor
-  pthread_mutex_unlock(&sp->mutex);
+  if(pthread_mutex_unlock(&sp->mutex)!=0){
+    printf("ERROR: Unable to unlock mutex.\n");
+    exit(EXIT_FAILURE);
+  }
 
   // returns file descriptor
   return fd;
@@ -54,11 +66,17 @@ int sbuf_remove(sbuf_monitor_t * sp){
 // inserts file descriptor into monitor
 void sbuf_insert(sbuf_monitor_t * sp, int fd){
   // lock monitor
-  pthread_mutex_lock(&sp->mutex);
+  if(pthread_mutex_lock(&sp->mutex)!=0){
+    printf("ERROR: Unable to lock mutex.\n");
+    exit(EXIT_FAILURE);
+  }
 
   // check if slot is available
   while(sp->count == sp->capacity){
-    pthread_cond_wait(&sp->empty_slot, &sp->mutex);
+    if(pthread_cond_wait(&sp->empty_slot, &sp->mutex) != 0){
+      printf("ERROR: Unable to wait on empty slot.\n");
+      exit(EXIT_FAILURE);
+    }
   }
 
   // add fd to slot
@@ -67,10 +85,16 @@ void sbuf_insert(sbuf_monitor_t * sp, int fd){
   sp->count++;
 
   // signal consumers
-  pthread_cond_signal(&sp->full_slot);
+  if(pthread_cond_signal(&sp->full_slot) != 0){
+    printf("ERROR: Unable to signal full slot.\n");
+    exit(EXIT_FAILURE);
+  }
 
   // unlock monitor
-  pthread_mutex_unlock(&sp->mutex);
+  if(pthread_mutex_unlock(&sp->mutex)!=0){
+    printf("ERROR: Unable to unlock mutex.\n");
+    exit(EXIT_FAILURE);
+  }
 }
 
 // initialize monitor
