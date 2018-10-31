@@ -90,6 +90,8 @@ int main(int argc, char ** argv){
   for(i = 0; i < SEARCH_CAPACITY; i++){
     pthread_create(&searchers[i], NULL, &dictionarySearch, (void*)&dictInfo);
   }
+
+  
   
   // infinite loop to get connections
   while(1){
@@ -125,43 +127,51 @@ int main(int argc, char ** argv){
 
 // thread function to search a dictionary for client word
 void *dictionarySearch(void * dictStruct){
-  printf("Running my thread\n");
+  // continuous thread loop
+  while(1){
+    printf("Running dictionary thread\n");
 
-  // cast struct to struct reference
-  dictThread *dictInfo = (dictThread*)dictStruct;
+    // cast struct to struct reference
+    dictThread *dictInfo = (dictThread*)dictStruct;
+    
+    printf("Getting client descriptor\n");
+    
+    // get client file descriptor
+    int clientFd = sbuf_remove(dictInfo->monitor);
+    
+    // buffer
+    char buffer[BUFFSIZE];
+    
+    printf("Attempting to read from client\n");
 
-  printf("Getting client descriptor\n");
+    int numRead = read(clientFd, buffer, BUFFSIZE);
+    
+    // get word to check from client
+    if(numRead == 0){
+      close(clientFd);
+      printf("Client disconnected\n");
+      continue;
+    }else if(numRead < 0){
+      printf("ERROR: Failed to read from client.\n");
+      exit(EXIT_FAILURE);
+    }
 
-  // get client file descriptor
-  int clientFd = sbuf_remove(dictInfo->monitor);
-  
-  // buffer
-  char buffer[BUFFSIZE];
+    // find newline character in client word
+    int i = 0;
+    while(buffer[i] != '\n'){
+      ++i;
+    }
+    
+    // overwrite newline with null
+    buffer[i] = '\0';
+    
+    // search dict for client word
+    int isWord = checkDict(dictInfo->dict, buffer, dictInfo->dictLen);
 
-  printf("Attempting to read from client\n");
-  
-  // get word to check from client
-  if(read(clientFd, buffer, BUFFSIZE)<0){
-    printf("ERROR: Failed to read client input.\n");
-    exit(EXIT_FAILURE);
-  }
-  
-  // find newline character in client word
-  int i = 0;
-  while(buffer[i] != '\n'){
-    printf("[%c]\n", buffer[i]);
-    ++i;
-  }
-
-  // overwrite newline with null
-  buffer[i] = '\0';
-  
-  // search dict for client word
-  int isWord = checkDict(dictInfo->dict, buffer, dictInfo->dictLen);
-
-  if(isWord){
-    printf("[%s] is a word\n", buffer);
-  }else{
-    printf("[%s] is not a word\n", buffer);
+    if(isWord){
+      printf("[%s] is a word\n", buffer);
+    }else{
+      printf("[%s] is not a word\n", buffer);
+    }
   }
 }
