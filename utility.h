@@ -6,11 +6,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "dictionary.h"
+
 #define CAPACITY 12
 
 typedef struct sbuf_monitor_t{
   int *buf;
-  int size;
+  int capacity;
+  int count;
   int front;
   int rear;
   pthread_mutex_t mutex;

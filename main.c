@@ -17,12 +17,13 @@
 
 #define DEFAULT_DICTIONARY "words.txt" // defaults dictionary file
 #define DEFAULT_PORT "1111" // default port
-#define BOUNDED_BUFF_SIZE 2 // size of bounded buffer
 
 #define BUFFSIZE 50
-#define SERVICE_CAPACITY 12
-#define SEARCH_CAPACITY 6
-#define LOG_CAPACITY 3
+#define SERVICE_CAPACITY 2
+#define THREAD_CAPACITY 1
+
+pthread_mutex_t fileMutex;
+char fileName[BUFFSIZE] = "log.txt";
 
 typedef struct dictThread{
   char ** dict;
@@ -70,28 +71,36 @@ int main(int argc, char ** argv){
   // creates a passive socket to be used for accepting connections
   listenfd = getlistenfd(port);
 
-  sbuf_monitor_t serverToLook;
-  sbuf_init(&serverToLook, SERVICE_CAPACITY);
+  sbuf_monitor_t *serverToLook = (sbuf_monitor_t*)malloc(sizeof(sbuf_monitor_t));
+
+  if(serverToLook == NULL){
+    printf("ERROR: Failed to Malloc monitor");
+    exit(EXIT_FAILURE);
+  }
+  
+  sbuf_init(serverToLook, SERVICE_CAPACITY);
 
   // struct to hold information neccesary for dictionary threads
-  dictThread dictInfo;
+  dictThread *dictInfo = (dictThread*)malloc(sizeof(dictThread));
 
-  dictInfo.dict = dict;
-  dictInfo.dictLen = dictLen;
-  dictInfo.monitor = &serverToLook;
+  if(dictInfo == NULL){
+    printf("ERROR: Failed to Malloc dictionary");
+    exit(EXIT_FAILURE);
+  }
   
-  // array of searcher threads
-  pthread_t searchers[SEARCH_CAPACITY];
+  dictInfo->dict = dict;
+  dictInfo->dictLen = dictLen;
+  dictInfo->monitor = serverToLook;
 
-  // array of logger threads
-  pthread_t loggers[LOG_CAPACITY];
+  // array of searcher threads
+  pthread_t searchers[THREAD_CAPACITY];
 
   int i;
-  for(i = 0; i < SEARCH_CAPACITY; i++){
-    pthread_create(&searchers[i], NULL, &dictionarySearch, (void*)&dictInfo);
+  for(i = 0; i < THREAD_CAPACITY; i++){
+    pthread_create(&searchers[i], NULL, &dictionarySearch, (void*)dictInfo);
   }
 
-  
+  pthread_mutex_init(&fileMutex, NULL);
   
   // infinite loop to get connections
   while(1){
@@ -121,7 +130,7 @@ int main(int argc, char ** argv){
 
     printf("Added client to queue.\n");
     // inserts client connection into buffer
-    sbuf_insert(&serverToLook, connectedfd);
+    sbuf_insert(serverToLook, connectedfd);
   }
 }
 
@@ -129,6 +138,7 @@ int main(int argc, char ** argv){
 void *dictionarySearch(void * dictStruct){
   // continuous thread loop
   while(1){
+    int flag = 0;
     printf("Running dictionary thread\n");
 
     // cast struct to struct reference
@@ -140,38 +150,63 @@ void *dictionarySearch(void * dictStruct){
     int clientFd = sbuf_remove(dictInfo->monitor);
     
     // buffer
-    char buffer[BUFFSIZE];
+    char buffer[BUFFSIZE] = "Not a boy";
     
-    printf("Attempting to read from client\n");
+    while(strcmp(buffer, "DONE") != 0 && flag == 0){
+      //      write(clientFd, "Enter a word (DONE to quit)\n", 29);
+      
+      printf("Attempting to read from client\n");
+      
+      int numRead = read(clientFd, buffer, BUFFSIZE);
+      
+      // get word to check from client
+      if(numRead == 0){
+	close(clientFd);
+	flag = 1;
+	printf("Client disconnected\n");
+	continue;
+      }else if(numRead < 0){
+	printf("ERROR: Failed to read from client.\n");
+	exit(EXIT_FAILURE);
+      }
+      
+      // replace newline character in client word
+      buffer[numRead-1] = '\0';
 
-    int numRead = read(clientFd, buffer, BUFFSIZE);
-    
-    // get word to check from client
-    if(numRead == 0){
-      close(clientFd);
-      printf("Client disconnected\n");
-      continue;
-    }else if(numRead < 0){
-      printf("ERROR: Failed to read from client.\n");
-      exit(EXIT_FAILURE);
-    }
+      // search dict for client word
+      int isWord = checkDict(dictInfo->dict, buffer, dictInfo->dictLen);
+      
+      if(isWord){
+	if(write(clientFd, "OK\n", 3) == -1){
+	  close(clientFd);
+	  continue;
+	}
+	printf("[%s] is a word\n", buffer);
+      }else{
+	if(write(clientFd, "MISSPELLED\n", 11) == -1){
+	  close(clientFd);
+	  continue;
+	}
+	printf("[%s] is not a word\n", buffer);
+      }
+      
+      if(pthread_mutex_lock(&fileMutex) != 0){
+	printf("ERROR: Unable to lock file mutex.\n");
+	exit(EXIT_FAILURE);
+      }
 
-    // find newline character in client word
-    int i = 0;
-    while(buffer[i] != '\n'){
-      ++i;
-    }
-    
-    // overwrite newline with null
-    buffer[i] = '\0';
-    
-    // search dict for client word
-    int isWord = checkDict(dictInfo->dict, buffer, dictInfo->dictLen);
+      FILE * lfile = fopen(fileName, "a");
 
-    if(isWord){
-      printf("[%s] is a word\n", buffer);
-    }else{
-      printf("[%s] is not a word\n", buffer);
+      fprintf(lfile, "[%s] : %d\n", buffer, isWord);
+      
+      fclose(lfile);
+      
+      // unlocks monitor
+      if(pthread_mutex_unlock(&fileMutex)!=0){
+	printf("ERROR: Unable to unlock file mutex.\n");
+	exit(EXIT_FAILURE);
+      }
     }
+    
   }
 }

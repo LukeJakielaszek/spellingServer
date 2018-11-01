@@ -46,7 +46,7 @@ int sbuf_remove(sbuf_monitor_t * sp){
   fd = sp->buf[(++sp->front) % (sp->capacity)];
 
   sp->count--;
-  
+
   // signals producers
   if(pthread_cond_signal(&sp->empty_slot) != 0){
       printf("ERROR: Unable to signal empty slot.\n");
