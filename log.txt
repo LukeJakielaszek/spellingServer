@@ -1,49 +1,10 @@
 [HELLO] : 1
-[WORLD] : 1
-[MY BOY] : 0
+[JASD] : 0
 [DONE] : 1
 [HELLO] : 1
-[WORLD] : 1
-[BOY] : 1
+[JHSADLKA] : 0
 [DONE] : 1
+[HOE] : 1
 [HELLO] : 1
-[BOI] : 0
+[SJLADNHA] : 0
 [DONE] : 1
-[DONE] : 1
-[HELLO] : 1
-[WOLRD] : 0
-[HELLO] : 1
-[HELLO] : 1
-[HELLO] : 1
-[HELLO] : 1
-[DONE] : 1
-[HELLO'] : 0
-[HELLO] : 1
-[HELLO] : 1
-[HELLO] : 1
-[HELLO
-HELLO] : 0
-[HELLO] : 1
-[HELLO] : 1
-[HELLO] : 1
-[] : 0
-[HELLO] : 1
-[HELLO] : 1
-[HELLO] : 1
-[HSADLJKHASLD] : 0
-[JKSADHJKAS] : 0
-[HEKA;Z] : 0
-[HELLO] : 1
-[HEK] : 0
-[JHDAJHKS] : 0
-[HDKDK
-KJSHAD] : 0
-[KJHDAS] : 0
-[KJASHD] : 0
-[HELLO] : 1
-[HELLO
-JLHSADJLK
-SDHJLAS] : 0
-[HELLO] : 1
-[HELLO] : 1
-[SAD] : 1

@@ -207,6 +207,7 @@ void *dictionarySearch(void * dictStruct){
 	exit(EXIT_FAILURE);
       }
     }
-    
+
+    close(clientFd);
   }
 }
