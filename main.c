@@ -20,7 +20,7 @@
 
 #define BUFFSIZE 50
 #define SERVICE_CAPACITY 2
-#define THREAD_CAPACITY 1
+#define THREAD_CAPACITY 2
 
 pthread_mutex_t fileMutex;
 char fileName[BUFFSIZE] = "log.txt";
@@ -153,12 +153,14 @@ void *dictionarySearch(void * dictStruct){
     char buffer[BUFFSIZE] = "Not a boy";
     
     while(strcmp(buffer, "DONE") != 0 && flag == 0){
-      //      write(clientFd, "Enter a word (DONE to quit)\n", 29);
+      char startMessage[] = "Enter a word (DONE to quit)\n";
+
+      write(clientFd, startMessage, strlen(startMessage));
       
       printf("Attempting to read from client\n");
       
       int numRead = read(clientFd, buffer, BUFFSIZE);
-      
+
       // get word to check from client
       if(numRead == 0){
 	close(clientFd);
@@ -175,6 +177,17 @@ void *dictionarySearch(void * dictStruct){
 
       // search dict for client word
       int isWord = checkDict(dictInfo->dict, buffer, dictInfo->dictLen);
+
+      // sets flag is client entered done
+      if(strcmp(buffer, "DONE") == 0){
+	flag = 1;
+	char endMessage[] = "Disconnecting from Server...\n";
+	
+	write(clientFd, endMessage, strlen(endMessage));
+
+	printf("Client done.\n");
+	continue;
+      }
       
       if(isWord){
 	if(write(clientFd, "OK\n", 3) == -1){

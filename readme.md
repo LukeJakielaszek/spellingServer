@@ -1,5 +1,38 @@
 Spelling Server
 Design:
+   Upon running the server, the dictionary file is processed, the bounded
+   buffer is created using a monitor, the listener socket is instantiated,
+   and the worker threads are initialized and dispatched to use the monitor
+   and the dictionarySearch function. The server then loops indefinitely,
+   listening on the listener socket and connecting to new clients. As it
+   connects to a client, the client file descriptor is added to the monitor's
+   bounded buffer. The worker threads are notified of the full slot and remove
+   the client. The worker thread reads words from the client until done is read
+   or the client using a keyboard interrupt. Each word is looked up in the
+   dictionary and the result is sent to the client. The logfile is then locked
+   by the thread and the word and whether it exists or not is logged. The
+   logfile is then unlocked. When a client finishes entering all words, the
+   worker thread closes the client connection.
+
+Running:
+   Server:
+      The server is meant to run indefinately. As such, a keyboard interrupt
+      is the only way to end the server program. The sever is defaulted to
+      hold 2 clients in the bounded buffer. The server is defaulted to have
+      2 worker threads to process clients.
+      ./spellCheck:
+          Defaults to port 1111 and the dictionary file words.txt.
+      ./spellCheck dictfile.txt portNumber
+          Switches dictionary to desired dictionary and port to desired
+	  port number.
+      ./spellCheck dictfile.txt
+          Switches dictionary to desired dictionary file.
+      Words within the dictionary file must be newline delimited.
+
+   Client:
+      Testing was done using netcat. Clients can disconnect by typing done.
+      Clients can also disconnect with a keyboard interrupt without harming
+      the server.
 
 Scripts:
    main.c:
